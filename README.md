@@ -1,4 +1,7 @@
-###SpringIOC
+Spring 
+======
+SpringIOC
+------
     一.依赖注入的三种方式
     
         1.构造器注入
@@ -131,7 +134,8 @@
             3.在Java配置类加入XML文件
                 @ImportResource({xx.xml},{xxxx.xml})
          
-###Spring AOP
+Spring AOP
+------
     
     Spring Aop步骤：
 
@@ -249,7 +253,9 @@
                      <aop:declare-parents types-matching="com.ssm.czk.annotation.AOP.Imp.RoleServiceImp" implement-interface="com.ssm.czk.annotation.AOP.service.RoleVerifier"  default-impl="com.ssm.czk.annotation.AOP.Imp.RoleVerifierImp"/>
                  </aop:aspect>
              </aop:config>
-###Spring整合MyBatis
+             
+Spring整合MyBatis
+------
     Spring 整合 MyBatis
          1.配置dataSource：
                             MyBatis的配置文件的<environments>交由Spring管理，可以由SimpleDriverDataSource（不支持数据池），或者第三方数据库连接池DBCP，C3P0管理。
