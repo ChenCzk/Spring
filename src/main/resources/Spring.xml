@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <!--Role-->
+       <!--setter注入-->
+        <bean class="com.czk.Spring.POJO.Role" id="role1">
+            <property name="id" value="1"/>
+            <property name="name" value="法师"/>
+            <property name="grade" value="110"/>
+            <property name="health" value="good"/>
+        </bean>
+        <!--XML命名空间注册-->
+        <bean id="role2" class="com.czk.Spring.POJO.Role" p:id="12" p:name="射手" p:grade="100" p:health="good" ></bean>
+        <!--构造器注入-->
+        <bean class="com.czk.Spring.POJO.Role" id="role3">
+            <constructor-arg name="id" value="2"/>
+            <constructor-arg name="name" value="法师"/>
+            <constructor-arg name="grade" value="110"/>
+            <constructor-arg name="health" value="good"/>
+        </bean>
+        <!--XML命名空间注册-->
+        <bean class="com.czk.Spring.POJO.Role" id="role4" c:_0="2" c:_1="战士" c:_2="120" c:_3="good"></bean>
+
+    <!--Person-->
+        <!--setter注入-->
+        <bean class="com.czk.Spring.POJO.Person" id="person1">
+            <property name="id" value="1"/>
+            <property name="name" value="czk"/>
+            <property name="sex" value="male"/>
+            <property name="role" ref="role1"/>
+         </bean>
+
+        <!--构造器注入-->
+        <bean class="com.czk.Spring.POJO.Person" id="person2">
+            <constructor-arg name="id" value="1"/>
+            <constructor-arg name="name" value="czk"/>
+            <constructor-arg name="sex" value="male"/>
+            <constructor-arg name="role" ref="role1"/>
+        </bean>
+
+
+    <!--MyCollection-->
+    <bean class="com.czk.Spring.POJO.MyCollection" id="myCollection">
+        <property name="set" >
+            <set>
+                <value>1</value>
+                <value>2</value>
+            </set>
+        </property>
+        <property name="list">
+            <list>
+                <value>11</value>
+                <value>22</value>
+            </list>
+        </property>
+        <property name="map">
+            <map>
+                <entry key="111">
+                    <value>111</value>
+                </entry>
+                <entry key="222">
+                    <value>222</value>
+                </entry>
+            </map>
+        </property>
+        <property name="properties">
+            <props>
+                <prop key="1111">
+                    1111
+                </prop>
+                <prop key="2222">
+                    2222
+                </prop>
+            </props>
+        </property>
+        <property name="str">
+            <array>
+                <value>1</value>
+                <value>2</value>
+
+            </array>
+        </property>
+    </bean>
+
+
+</beans>

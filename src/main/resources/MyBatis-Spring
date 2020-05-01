@@ -1,0 +1,79 @@
+Spring 整合 MyBatis
+ 1.配置dataSource：
+                    MyBatis的配置文件的<environments>交由Spring管理，可以由SimpleDriverDataSource（不支持数据池），或者第三方数据库连接池DBCP，C3P0管理。
+ 2.配置SQLSessionFactory，类型Mybatis的配置文件
+    a. <!--引入数据源-->
+              <property name="dataSource" ref="dataSource"/>
+    b. <!--引入Mybatis配置文件-->
+              <property name="configLocation" value="classpath:mybatis.xml"/>
+ 3.配置MapperScannerConfigurer,才可以使用Mapper接口编程方式。
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+            <!--扫描特定的包（找到Mapper）-->
+            <property name="basePackage" value="com.czk.Mapper"/>
+            <property name="sqlSessionFactoryBeanName" value="SqlSessionFactory"/>
+            <!--指定注解@Repository为Mapper-->
+            <property name="annotationClass" value="org.springframework.stereotype.Repository"/>
+    </bean>
+    扫描：@EnableTransactionManagement
+
+
+事务有四个特性：ACID
+    原子性（Atomicity）：事务是一个原子操作，由一系列动作组成。事务的原子性确保动作要么全部完成，要么完全不起作用。
+    一致性（Consistency）：一旦事务完成（不管成功还是失败），系统必须确保它所建模的业务处于一致的状态，而不会是部分完成部分失败。在现实中的数据不应该被破坏。
+    隔离性（Isolation）：可能有许多事务会同时处理相同的数据，因此每个事务都应该与其他事务隔离开来，防止数据损坏。
+    持久性（Durability）：一旦事务完成，无论发生什么系统错误，它的结果都不应该受到影响，这样就能从任何系统崩溃中恢复过来。通常情况下，事务的结果被写到持久化存储器中。
+
+Spring并不直接管理事务，而是提供了多种事务管理器，由持久层框架实现，Mybatis主要由DataSourceTransactionManage事务管理器实现。
+    配置DataSourceTransactionManage事务管理器：
+    1.XML配置
+         <!--配置数据源事务管理器-->
+          <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+               <property name="dataSource" ref="dataSource"/>
+          </bean>
+
+    2.注解
+         @Bean(name = "transactionManager")
+         public PlatformTransactionManager getplatformTransactionManager(){
+             DataSourceTransactionManager transactionManager =new DataSourceTransactionManager();
+             transactionManager.setDataSource(initDataSource());
+             return transactionManager;
+         }
+
+ 声明式事务：
+    1.需要配置注解驱动：<tx:annotation-driven transaction-manager="transactionManager"/>
+    2.a.使用XMl声明式配置：
+        1.配置事务拦截器：TransactionInterceptor
+            根据正则式表达式匹配度决定采用哪种属性值！
+        2.配置拦截类：BeanNameAutoProxyCreator
+            定义需要拦截的类，一旦这些类启动，拦截器生效，给该类定义事务属性！
+
+        <!--配置事务拦截器-->
+        <bean id="transactionInterceptor" class="org.springframework.transaction.interceptor.TransactionInterceptor">
+            <property name="transactionManager" ref="transactionManager"/>
+            <!--配置事务属性-->
+            <property name="transactionAttributes">
+                <props>
+                   <!--key 代表业务方法的正则表达式，而其内容可以配置各类事务定义参数，这里值传播行为和隔离级别-->
+                   <prop key="intsert*">PROPAGATION_REQUIRED,ISOLATION_READ_UNCOMMITTED</prop>
+                </props>
+            </property>
+         </bean>
+        重点：Spring Ioc启动时会将transactionAttributes的内容解析放进TransactionDefinition事务定义器中，在运行时根据正则式表达式匹配度决定采用哪种方法
+
+        <!--指明哪些类要使用事务拦截器进行拦截-->
+        <bean class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+            <property name="beanNames">
+                <list>
+                    <!--关于Service是实现类都会被其拦截-->
+                    <value>*ServiceImpl</value>
+                </list>
+            </property>
+            <property name="interceptorNames">
+                <list>
+                    <!--定义事务拦截器-->
+                    <value>transactionInterceptor</value>
+                </list>
+            </property>
+        </bean>
+    b.用注解@Transaction进行配置
+        可以在类或方法上配置:@Transactional(propagation = Propagation.REQUIRES_NEW,isolation = Isolation.READ_COMMITTED)

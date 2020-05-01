@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--扫描包-->
+    <context:annotation-config/><!--启用扫描机制-->
+    <context:component-scan base-package="com.czk.SpringMybatis.*"/>
+
+    <!--使用${}获取内容-->
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath*:jdbc.properties</value>
+            </list>
+        </property>
+    </bean>
+
+
+    <!--配置数据源-->
+    <bean class="org.apache.commons.dbcp.BasicDataSource" id="dataSource">
+        <property name="username" value="${username}"/>
+        <property name="password" value="${password}"/>
+        <property name="driverClassName" value="${driverClassName}"/>
+        <property name="url" value="${url}"/>
+        <property name="maxIdle" value="${maxIdle}"/>
+        <property name="maxActive" value="${maxActive}"/>
+        <property name="maxWait" value="${maxWait}"/>
+    </bean>
+
+    <!--SqlSessionFactory-->
+    <bean id="SqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--引入数据源-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--引入Mybatis配置文件-->
+        <property name="configLocation" value="classpath:Spring-Mybatis/Mybaits.xml"/>
+    </bean>
+
+
+    <!--采用自动扫描方式创建mapper bean-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--扫描特定的包（找到Mapper）-->
+        <property name="basePackage" value="com.czk.SpringMybatis.Mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="SqlSessionFactory"/>
+        <!--指定@Repository备注为Mapper-->
+        <property name="annotationClass" value="org.springframework.stereotype.Repository"/>
+    </bean>
+
+    <!--配置数据源事务管理器-->   <!-- @Bean(name = "transactionManager")-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!--支持事务注解的驱动-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>   <!--@EnableTransactionManagement-->
+
+    <!--配置事务拦截器-->
+     <bean id="transactionInterceptor" class="org.springframework.transaction.interceptor.TransactionInterceptor">
+         <property name="transactionManager" ref="transactionManager"/>
+         <!--配置事务属性-->
+         <property name="transactionAttributes">
+             <props>
+                 <!--key 代表业务方法的正则表达式，而其内容可以配置各类事务定义参数-->
+                 <prop key="insert*">PROPAGATION_REQUIRED,ISOLATION_READ_UNCOMMITTED</prop>
+             </props>
+         </property>
+     </bean>
+
+    <!--指明哪些类要使用事务拦截器进行拦截-->
+     <bean class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+         <property name="beanNames">
+             <list>
+                 <!--关于Service是实现类都会被其拦截-->
+                 <value>*ServiceImp</value>
+             </list>
+         </property>
+         <property name="interceptorNames">
+             <list>
+                 <!--定义事务拦截器-->
+                 <value>transactionInterceptor</value>
+             </list>
+         </property>
+     </bean>
+
+</beans>

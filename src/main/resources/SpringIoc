@@ -1,0 +1,116 @@
+一.依赖注入的三种方式
+    1.构造器注入 Role(String,String)-->Role(index=0,index=1)
+        <constructor-arg index="0" value="xx"/>
+        <constructor-arg index="1" value="xx"/>
+    2.setter注入
+    3.接口注入 P226
+
+二.装配Bean
+    1.使用XMl配置装配Bean
+    2.使用命名空间装配Bean P234
+    3.使用注解装配Bean
+    注意：对于第三方的包或者其他外部的接口,用XML,自己写的包用注解
+         无论是XML还是注解的方式,最终都是将Bean装配到IOC容器中
+
+
+三.使用注解装载bean
+
+1.@Configuration用于定义配置类，可替换xml配置文件.
+    1.被注解的类内部包含有一个或多个被@Bean注解的方法，
+    2.这些方法将会被AnnotationConfigApplicationContext
+    3.或AnnotationConfigWebApplicationContext类进行扫描，
+    4.并用于构建bean定义，初始化Spring容器。
+
+
+
+2.@ComponentScan: 扫描特定的包（位置：config类上）
+    1.basePackageClasses
+        @ComponentScan(basePackageClasses = {A.Class,B.Class,...}//扫描这两个类所在的包和子包.
+    2.basePackages
+        @ComponentScan(basePackages = {"com.ssm.czk.annotation.pojo","com.ssm.czk.annotation.service"})//扫描指定的包和子包.
+    3.basePackageClasses+basePackages
+        @ComponentScan(basePackages = {"com.ssm.czk.annotation.pojo","com.ssm.czk.annotation.service"},
+                ComponentScan(basePackageClasses = {Role.class, RoleServiceImp.class}
+  XML:使用组件扫描:<context:component-scan base-package="com.ssm.czk.annotation">
+  @Component("id"):被扫描时,会被加入到Spring IOC容器中.
+    * @Controller :WEB层
+    * @Service :业务层
+    * @Repository :持久层
+  @Value("value"):值的注入
+3.自动装配
+    @Autowired:从 spring IOC 容器中自动按类型（ByType）装配（位置:属性,方法,参数前）
+        歧义性（当在有多个实现类的接口用自动装配时，按类型装配）：
+            @Primary：优先注入（位置：某一个接口实现类）
+            @Qualifier("某个接口实现类名称")：按照名称注入（位置：在@Autowirte下面）
+4.@Bean: 将方法返回的对象作为Spring的Bean,存放在IOC容器中.（位置：在方法上面）
+    4个配置项:
+        1.name:别名,可配置多个,如果为空,默认值为方法名。
+        2.autowire：标志是否是一个引用的Bean对象,默认值是AutoWire.NO。
+        3.initMethod:自定义初始化方法,在存放在IOC容器前执行。
+        4.destoryMethod:自定义摧毁方法,服务器正常关闭或IOC容器关闭前执行。
+5.@ImportResource:在注解中配置多个XML配置文件,位置(@ComponentScan下面),@ImportResource({"classpath:xxx.xml"})
+6.@Import:1.在ApplicationConfig中import多个配置类。
+          2.在XML文件中引入其他的XML文件。
+7.Profile
+    1.配置Profile
+        1.@Profile("xx") xx代表自定义的ID值，在使用时调用
+        2.在XML中使用profile="xx"（位置: beans 或者 xsi中）
+    2.使用Profile
+        由于配置Profile后，对应的Bean不会加载到SpringIOC容器中，所以要自行激活。
+        1.在Spring MVC中可以配置Web上下文参数或者DispatchServlet。
+        2.作为JNDI条目。
+        3.配置环境变量
+        4.配置JVM启动参数
+        5.在集成测试环境中使用@ActiveProfiles、
+8.加载properties
+    a.使用注解
+        1.导入Properties文件
+            在ApplicationConfig中导入文件
+                @PropertySource(value={"classpath:xxx.properties"},3个可选配置) P254
+        2.获取Properties文件的值
+            a.使用getProperty方法获取
+                ApplicationContext ctx = new AnnotationConfigApplicationContext(ApplicationConfig.class);
+                String property = ctx.getEnvironment().getProperty("jdbc.database.driver");
+            b.使用${}获取
+                PropertySourcesPlaceholderConfigurer:属性文件解析类，使用他就意味者允许Spring解析对应的属性文件，通过占位符获取！
+                1.首先在ApplicationConfig中定义PropertySourcesPlaceholderConfigurer类并添加到IOC容器中
+                    @Bean
+                    public PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer(){
+                        return new PropertySourcesPlaceholderConfigurer();
+                    }
+                2.通过${xx}获取对应的值,eg:${jdbc.database.driver},${a}
+
+    b.使用XML(都是用${}获取)
+        a.使用<context:property-placeholder>元素,当有多个文件时不建议。
+                <context:property-placeholder location="classpath:asd.properties" 。。。/>
+        b.使用PropertyPlaceHolderConfigurer的bean,内置数组,可以方便导入多个文件
+            <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" >
+                    <!--可以配置多个属性-->
+                    <property name="locations">
+                        <array>
+                            <value>classpath:asd.properties</value>
+                            <value>classpath:database-config.properties</value>
+                        </array>
+                    </property>
+            </bean>
+9.@Conditional:条件化Bean,满足自定义条件才可装配Bean。
+    1.创建一个DataSourceCondition类实现org.springframework.context.annotation.Condition接口。
+        重写matches方法:
+            参数：1.context:获取Sprign的上下文。
+                 2.AnnotatedTypeMetadata:获得该Bean的注解信息。
+    2.在对应的Bean上添加注解 @Conditional({DataSourceCondition.class})即可。
+
+10.SpEL
+    格式：@Value("#{xx}")
+    xx：经常用来获取IOC容器的Bean，比如@Value("#{role}")
+        进而用来获取方法属性值，比如@Value("#{role.id}")@Value("#{role.getId()}")
+
+
+
+11.加载配置文件
+    1.在XML文件中引用XML文件
+        <import resource = "xxxx.xml"/>
+    2.在java配置类加入java配置类
+        @Import(xxx.class)
+    3.在Java配置类加入XML文件
+        @ImportResource({xx.xml},{xxxx.xml})

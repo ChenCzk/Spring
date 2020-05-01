@@ -1,0 +1,121 @@
+
+
+JDK代理：需要接口
+CGLib代理：不需要接口
+
+Spring Aop：
+
+    1.选择连接点
+        比如：1.JDK代理(连接点某个接口的Imp方法):
+                 一个接口RoleService有个方法printRole()，
+                 有个该接口的实现类RoleServiceImp调用方法printRole()，设置该方法为连接点，在创建切面时定义
+                 系统会为该Imp类生成代理对象，然后拦截printRole方法，于是可以产生各种AOP通知方法。
+             2.CGLib代理(实现类的方法，不需要接口)
+                 选择一个类的方法作为连接点，在创建切面类时定义。
+    2.创建切面类（RoleAspect）
+        用@Aspect注解一个类，Spring就会把这个类当作一个切面。
+        该切面类实现可以实现5种通知：
+                   @Before("xx")：前置通知
+                   @Around("xx")：环绕通知
+                   @After("xx")：后置通知
+                   @AfterReturning("xx")：返回通知（正常）
+                   @AfterThrowing("xx")：异常通知
+        "xx":execution("* com.ssm.xx.RoleServiceImp.printRole(..)")
+             1.execution:代表执行方法的时候后会触发。
+             2.*: 代表任意返回类型。
+             3.com.xx：代表连接点属于的类（Imp）的全限定类名。
+             4.printRole(..):被拦截的方法名称（连接点）,..代表任意参数。
+        更方便的操作：
+             1.定义一个方法 public void print(){}
+             2.在他头上加注解：@Pointcut("execution("* com.ssm.xx.RoleServiceImp.printRole(..)")")
+             3.这样通知上直接使用该方法就行，比如：@Before("print()")
+    3.添加配置
+        在config中使用注解：
+                1.@EnableAspectJAutoProxy:启动AspectJ框架的自动代理。
+                2.@Bean：返回一个切面的实例
+                     @Bean
+                      public RoleAspect getRoleService(){
+                          return new RoleAspect();
+                      }
+
+    4.测试（以注解的方式）
+        JDK代理：
+            ApplicationContext ctx= new AnnotationConfigApplicationContext(AopConfig.class);
+            Role r = new Role(1l,"asd","asdss");
+            RoleService bean = ctx.getBean(RoleService.class); //获取连接点该类的接口的bean。
+            bean.printRole(r);
+        CGLib代理:
+             ApplicationContext ctx= new AnnotationConfigApplicationContext(AopConfig.class);
+             Role r = new Role(1l,"asd","asdss");
+             RoleServiceImp roleServiceImp = (RoleServiceImp)ctx.getBean("roleServiceImp"); //获取连接点该类的bean。
+             roleServiceImp.printRole(r);
+
+
+环绕通知（@Around）：
+
+     public void around(ProceedingJoinPoint jp) throws Throwable {
+            System.out.println("around before");//前置通知
+            try {
+                jp.proceed();//调用连接点方法
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();//异常通知
+            }
+            System.out.println("around after");//后置通知
+        }
+     注意：1.参数ProceedingJoinPoint，由Spring提供，使用他可以反射连接点方法。
+          2.环绕通知的具体各个通知优先与其他通知执行，
+                around before
+                before--
+                Role{id=1, roleName='asd', note='asdss'}
+                around after
+                after
+                afterReturning。
+
+给通知方法传递多个参数args:
+    1.在通知方法上定义参数类型before(Role role,int sort)。
+    2.在注解上加 "&& args(role,sort)"
+        @Before(execution("* com.ssm.xx.RoleServiceImp.printRole(..)"+"&& args(role,sort)"))
+        public void before(Role role,int sort){
+            System.out.println(role+sort)
+        }
+
+引入：
+    简介：有一个类，需要条件约束，然后自定义一个条件类，引入到切面从而起到约束的作用。
+    目的：获得条件类，从而实现一定条件逻辑
+    重点：定义一个接口和接口实现类（条件类）,在需要条件化的类上实现该接口，然后可以在Ioc容器中获取需要条件化的类通过强制转换得到条件类，从而实现条件逻辑处理。
+    步骤：1.定义一个接口和接口实现类（条件类）
+          2.在需要条件化的类上实现该接口
+                在切面类中定义该条件类接口的返回方法并添加注解@DeclareParents
+                   @DeclareParents(value = "需要条件化的类的权限定类名",defaultImpl = 条件类.Class)
+               eg:
+                   @DeclareParents(value = "com.ssm.czk.annotation.AOP.Imp.RoleServiceImp",defaultImpl = RoleVerifierImp.class)
+                   public RoleVerifier roleVerifier;
+          3.通过该类获取条件类(强制转换)
+            RoleServiceImp roleServiceImp = (RoleServiceImp)ctx.getBean("roleServiceImp");
+            RoleVerifier roleVerifier = (RoleVerifier) roleServiceImp;
+            只要AOP让代理对象挂到RoleVerifier接口下，就可以把对应的Bean通过强制装换
+
+
+
+使用XML实现AOP：
+定义接口,接口实现类（如果要引入，private RoleVerifier roleVerifier= null;）,切面类（定义通知方法）
+    <!--定义切面类-->
+         <bean id="XMLAspect" class="com.ssm.czk.annotation.AOP.Imp.XMLAspect"/>
+    <!--定义实现类-->
+         <bean id="roleServiceImp" class="com.ssm.czk.annotation.AOP.Imp.RoleServiceImp"/>
+    <!--AOP配置-->
+         <aop:config>
+             <!--引用XMLAspect作为切面类-->
+             <aop:aspect ref="XMLAspect">
+                 <!--定义切点-->
+                 <aop:pointcut id="printRole" expression="execution(* com.ssm.czk.annotation.AOP.Imp.RoleServiceImp.printRole(..))"/>
+                 <!--定义通知-->
+                 <aop:before method="before" pointcut="execution(* com.ssm.czk.annotation.AOP.Imp.RoleServiceImp.printRole(..)) and args(role,sort)" />
+                 <aop:after method="after" pointcut-ref="printRole"/>
+                 <aop:after-throwing method="afterThrowing" pointcut-ref="printRole"/>
+                 <aop:after-returning method="afterReturning" pointcut-ref="printRole"/>
+                 <aop:around method="around" pointcut-ref="printRole"/>
+                 <!--引入-->
+                 <aop:declare-parents types-matching="com.ssm.czk.annotation.AOP.Imp.RoleServiceImp" implement-interface="com.ssm.czk.annotation.AOP.service.RoleVerifier"  default-impl="com.ssm.czk.annotation.AOP.Imp.RoleVerifierImp"/>
+             </aop:aspect>
+         </aop:config>
